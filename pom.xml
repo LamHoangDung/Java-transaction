@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>org.example</groupId>
+    <artifactId>Java-transaction</artifactId>
+    <version>1.0-SNAPSHOT</version>
+
+    <properties>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <dependencies>
+
+        <!--
+            1. PostgreSQL JDBC Driver
+        -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>42.7.3</version>
+        </dependency>
+
+        <!--
+            2. HikariCP — Connection Pool
+            Vai trò: Giữ sẵn một "hồ" kết nối DB để tái sử dụng.
+            Thay vì mở/đóng kết nối mỗi lần query (chậm ~100ms),
+            HikariCP cho mượn kết nối sẵn có (< 1ms).
+        -->
+        <dependency>
+            <groupId>com.zaxxer</groupId>
+            <artifactId>HikariCP</artifactId>
+            <version>5.1.0</version>
+        </dependency>
+
+        <!--
+            3. JSch (mwiede fork) — SFTP Client
+            Vai trò: Kết nối vào SFTP server của đối tác để download file CSV.
+            Giống như FileZilla nhưng viết bằng code Java.
+        -->
+        <dependency>
+            <groupId>com.github.mwiede</groupId>
+            <artifactId>jsch</artifactId>
+            <version>0.2.19</version>
+        </dependency>
+
+        <!--
+            4. Apache MINA SSHD — Dựng SFTP Server local
+            Vai trò: Tạo một SFTP server giả ngay trên máy bạn để test.
+            Vì không có server thật của đối tác, ta tự dựng một cái.
+        -->
+        <dependency>
+            <groupId>org.apache.sshd</groupId>
+            <artifactId>sshd-core</artifactId>
+            <version>2.13.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.sshd</groupId>
+            <artifactId>sshd-sftp</artifactId>
+            <version>2.13.0</version>
+        </dependency>
+
+        <!--
+            5. OpenCSV — Đọc file CSV
+            Vai trò: Parse (phân tích) file .csv thành danh sách object Java.
+            Thay vì tự split(",") thủ công (dễ lỗi), dùng thư viện này.
+        -->
+        <dependency>
+            <groupId>com.opencsv</groupId>
+            <artifactId>opencsv</artifactId>
+            <version>5.9</version>
+        </dependency>
+
+        <!--
+            6. Jakarta Mail — Gửi Email
+            Vai trò: Gửi báo cáo đối soát qua email (Gmail/Outlook).
+            Chú ý: Dùng "jakarta.mail.*" không phải "javax.mail.*" (cũ)
+        -->
+        <dependency>
+            <groupId>com.sun.mail</groupId>
+            <artifactId>jakarta.mail</artifactId>
+            <version>2.0.1</version>
+        </dependency>
+
+        <!--
+            7. SLF4J + Logback — Hệ thống Log
+            Vai trò: Ghi log ra console và file thay vì System.out.println.
+            Chuyên nghiệp hơn, có thể tắt log theo level (DEBUG/INFO/ERROR).
+            SLF4J = interface (API chung), Logback = implementation (hiện thực).
+        -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>2.0.13</version>
+        </dependency>
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>1.5.6</version>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.18.32</version>
+            <scope>provided</scope>
+        </dependency>
+
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- Plugin compiler để đảm bảo dùng Java 21 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+                <configuration>
+                    <source>21</source>
+                    <target>21</target>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
