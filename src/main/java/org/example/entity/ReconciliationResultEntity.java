@@ -17,7 +17,6 @@ public class ReconciliationResultEntity {
     private LocalDate reconciliationDate;
     private int ourCount; //Tổng giao dịch bên mình
     private int partnerCount; //Tổng giao dịch been KH
-
     private int bothHave; //CASE 1
     private int partnerOnly; //CASE 2
     private int ourOnly; //CASE 3

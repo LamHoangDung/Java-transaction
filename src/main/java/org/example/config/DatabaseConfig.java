@@ -35,10 +35,6 @@ public class DatabaseConfig {
         log.info("ket noi thanh cong");
     }
 
-    /**
-     * muon 1 ket noi de thuc hien truy van sql
-     * QUAN TRỌNG: Phải dùng trong try-with-resources để tự động trả kết nối về hồ!
-     */
     public static Connection getConnection() throws SQLException {
         if (dataSource == null) {
             throw new IllegalStateException("databaseconfig chua duoc khoi tao, phai intit() truoc");
@@ -46,9 +42,6 @@ public class DatabaseConfig {
         return dataSource.getConnection();
     }
 
-    /**
-     * Đóng toàn bộ pool khi tắt ứng dụng
-     */
     public static void close() {
         if (dataSource != null && !dataSource.isClosed()) {
             dataSource.close();

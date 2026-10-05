@@ -6,22 +6,33 @@ import org.slf4j.LoggerFactory;
 
 import java.sql.*;
 import java.time.LocalDate;
+import java.util.HashSet;
+import java.util.Set;
 
 public class TransactionRepository {
     private static final Logger log = LoggerFactory.getLogger(TransactionRepository.class);
-    public int countByDate(LocalDate date){
-        String query = "select count(*) from transactions where date(transaction_time) = ? AND status = 'SUCCESS'" ;
+    public Set<String> countByDate(LocalDate date){
+        String query = "SELECT transaction_id\n" +
+                "            FROM transactions\n" +
+                "            WHERE DATE(transaction_time) = ?\n" +
+                "              AND status = 'SUCCESS'" ;
 
+
+        Set<String> ids = new HashSet<>();
         try(Connection connection = DatabaseConfig.getConnection(); //mo ket noi toi database
             PreparedStatement statement = connection.prepareStatement(query)){
             statement.setDate(1, Date.valueOf(date));
-            ResultSet resultSet = statement.executeQuery();
-            if(resultSet.next()){
-                return resultSet.getInt(1);
+            try (ResultSet rs = statement.executeQuery()) {
+                while (rs.next()) {
+                    ids.add(rs.getString("transaction_id"));
+                }
             }
-        } catch (Exception e) {
-            System.out.println("Loi countByDate: " + e.getMessage());
+            return ids;
+        } catch (SQLException e) {
+            log.error("gap loi khi lay giao dich ngay: {}", date + e.getMessage());
+            throw new RuntimeException(
+                    "Không thể lấy giao dịch bên mình" + e.getMessage()
+            );
         }
-        return 0;
     }
 }
