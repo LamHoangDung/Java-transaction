@@ -36,7 +36,7 @@ public class ReconciliationService {
         int ourOnly = 0;
         int partnerOnly = 0;
 
-        //duyet qua cac giao dich seccess ben minh
+        //duyet qua cac giao dich seccess ben minh neu ben kia cung co id tuong ung thi la -> bothhave
         for (String id : ourIds) {
             if (partnerIds.contains(id)) {
                 bothHave++;
@@ -71,7 +71,6 @@ public class ReconciliationService {
 
         return result;
     }
-
 
     public void saveReport(ReconciliationResultEntity reconciliationResultEntity, String toEmail){
         ReconciliationReportEntity report = new ReconciliationReportEntity();
