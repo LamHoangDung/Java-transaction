@@ -22,9 +22,9 @@ public class TransactionRepository {
         try(Connection connection = DatabaseConfig.getConnection(); //mo ket noi toi database
             PreparedStatement statement = connection.prepareStatement(query)){
             statement.setDate(1, Date.valueOf(date));
-            try (ResultSet rs = statement.executeQuery()) {
-                while (rs.next()) {
-                    ids.add(rs.getString("transaction_id"));
+            try (ResultSet resultSet = statement.executeQuery()) {
+                while (resultSet.next()) {
+                    ids.add(resultSet.getString("transaction_id"));
                 }
             }
             return ids;
@@ -33,6 +33,27 @@ public class TransactionRepository {
             throw new RuntimeException(
                     "Không thể lấy giao dịch bên mình" + e.getMessage()
             );
+        }
+    }
+
+
+    public String findStatusByTransactionId(String transactionId){
+        String query = "Select status from transactions where transaction_id = ?";
+
+        try(Connection connection = DatabaseConfig.getConnection();
+            PreparedStatement statement = connection.prepareStatement(query)) {
+
+            statement.setString(1,transactionId);
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if(resultSet.next()){
+                    return resultSet.getString("status");
+                }
+                return null;
+            }
+
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
         }
     }
 }

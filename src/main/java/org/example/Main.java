@@ -3,25 +3,20 @@ package org.example;
 import org.example.config.AppConfig;
 import org.example.config.DatabaseConfig;
 import org.example.cronjob.ReconciliationJob;
-import org.example.entity.ReconciliationReportEntity;
 import org.example.entity.ReconciliationResultEntity;
 import org.example.repository.PartnerTransactionRepository;
 import org.example.repository.ReconciliationRepository;
 import org.example.repository.TransactionRepository;
-import org.example.service.ConvertService;
-import org.example.service.EmailService;
-import org.example.service.ReconciliationService;
-import org.example.service.SftpService;
+import org.example.service.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import java.io.File;
-import java.sql.Connection;
+import java.security.GeneralSecurityException;
+import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.time.LocalDate;
 import java.util.Scanner;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+
 
 public class Main {
     private static final Logger log = LoggerFactory.getLogger(Main.class);
@@ -35,53 +30,57 @@ public class Main {
 
         //khoi tao cau hinh va ket noi
         AppConfig config = new AppConfig();
-        DatabaseConfig.init(config);
 
+        RsaKeyService rsaKeyService = new RsaKeyService(config);
+
+        try{
+            PublicKey publicKey = rsaKeyService.loadPublicKey();
+            PrivateKey privateKey = rsaKeyService.loadPrivateKey();
+
+            log.info("da doc duoc 2 key");
+        } catch (GeneralSecurityException e) {
+            log.info("loi khong doc duoc Key: " + e.getMessage());
+            throw new RuntimeException(e);
+        }
+
+        //ket noi database
+        DatabaseConfig.init(config);
 
         TransactionRepository transactionRepository = new TransactionRepository();
         ReconciliationRepository reconciliationRepository = new ReconciliationRepository();
         PartnerTransactionRepository partnerTransactionRepository = new PartnerTransactionRepository();
-
-
+        FileService fileService = new FileService(rsaKeyService,config);
         SftpService sftpService = new SftpService(config);
         ConvertService convertService = new ConvertService(partnerTransactionRepository);
-        ReconciliationService reconService = new ReconciliationService(transactionRepository, partnerTransactionRepository, reconciliationRepository);
+        ReconciliationService reconService = new ReconciliationService(transactionRepository,
+                partnerTransactionRepository, reconciliationRepository, fileService,convertService );
         EmailService emailService = new EmailService(config, reconService);
+        InquiryService inquiryService = new InquiryService(transactionRepository);
 
+        ReconciliationJob reconciliationJob = new ReconciliationJob(sftpService);
 
-        ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
-        scheduler.scheduleAtFixedRate(() -> {
-            try {
-                log.info("cronjob - chay va download file ");
-                downloadFile = sftpService.downloadFile();
-            } catch (Exception e) {
-                log.error("Loi cronjob: " + e.getMessage());
-            }
-        }, 5, 120, TimeUnit.SECONDS);
-
-
+        reconciliationJob.start();
 
         Scanner scanner = new Scanner(System.in);
         while (true) {
             System.out.println("1/ nap file vao DB + doi soat");
             System.out.println("2/ gui mail bao cao ");
             System.out.println("3/ thoat chuong trinh");
+            System.out.println("4/ kiem tra giao dich");
 
             String choice = scanner.nextLine();
             switch (choice) {
                 case "1":
 
                     System.out.println("bdau doi soat");
-
+                    downloadFile = reconciliationJob.getDownloadedFile();
                     if (downloadFile != null) {
-                        String dateStr = downloadFile.getName().replace("transactions_", "").replace(".csv", "");
-                        currentDate= LocalDate.parse(dateStr);
-
-                        convertService.convertAndSave(downloadFile, currentDate);
-
-                        reconciliationResultEntity = reconService.reconcile(currentDate);
-
-                        System.out.println("doi soat thanh cong, ktra du lieu trc khi gui mail");
+                        reconciliationResultEntity = reconService.processEncryptedFile(downloadFile);
+                        if(reconciliationResultEntity != null) {
+                            System.out.println("doi soat thanh cong");
+                        }
+                    }else{
+                        System.out.println(("chua tai duoc file"));
                     }
                     break;
                 case "2":
@@ -96,10 +95,27 @@ public class Main {
                     break;
                 case "3":
                     System.out.println("thoat chuong trinh");
-                    scheduler.shutdown();
+                    reconciliationJob.shutdown();
                     DatabaseConfig.close();
                     System.exit(0);
                     break;
+                case "4":
+                    System.out.println("Nhập mã giao dịch:");
+                    String transactionId = scanner.nextLine().trim();
+
+                    if (transactionId.isEmpty()) {
+                        System.out.println("Vui lòng nhập mã giao dịch");
+                        break;
+                    }
+
+                    try {
+                        String result = inquiryService.inquire(transactionId);
+                        System.out.println(result);
+                    } catch (RuntimeException e) {
+                        System.out.println("Không thể kiểm tra giao dịch, vui lòng thử lại");
+                    }
+                    break;
+
                 default:
                     System.out.println("lua chon khong hop le, hay nhap lai");
             }
