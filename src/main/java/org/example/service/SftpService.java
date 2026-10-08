@@ -11,6 +11,8 @@ import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -35,15 +37,13 @@ public class SftpService {
         String remotePath = config.get("sftp.remote.path");
 
         // Luu file vao thu muc partner
-        Path localDirPath = Paths.get("partner");
+        Path localDirPath = Paths.get(config.getPartnerLocalDir()
+        );
 
         Session session = null; //phien lam viec
         ChannelSftp channelSftp = null; //duong truyen file kenh sftp, duoc su dung de thuc hien cac lenh nhu tai file(get) va day file (put)
 
         try {
-            // Tao thu muc partner neu chua co
-            Files.createDirectories(localDirPath);
-
             //tao ket noi toi sftp
             JSch jsch = new JSch();
             session = jsch.getSession(username, host, port);
@@ -57,24 +57,35 @@ public class SftpService {
             channelSftp.connect();
 
 
-            List<ChannelSftp.LsEntry> entries = channelSftp.ls(remotePath);  //lay tat ca cac file trong thu muc
-            List<String> csvFiles = new ArrayList<>();
+            List<ChannelSftp.LsEntry> entries = channelSftp.ls(remotePath);
+            List<String> encryptedFiles = new ArrayList<>();
             for (ChannelSftp.LsEntry entry : entries) {
+
                 String name = entry.getFilename();
-                // Chỉ lấy các file bắt đầu bằng "transactions_" và kết thúc bằng ".csv"
-                if (!entry.getAttrs().isDir() && name.startsWith("transactions_") && name.endsWith(".csv")) {
-                    csvFiles.add(name);
+
+                //kiem tra phai co ngay thang va duoi .enc
+                if (!name.matches("^\\d{4}-\\d{2}-\\d{2}_[^/\\\\]+\\.enc$")) {
+                    continue;
                 }
+
+                // kiem tra cu phap ngay xem co dung dinh dang yyyy-mm-dd chua
+                try {
+                    LocalDate.parse(name.substring(0, 10));
+                } catch (DateTimeParseException e) {
+                    log.warn("file co ngay khong hop le: {}", name);
+                    continue;
+                }
+                encryptedFiles.add(name);
             }
-            if (csvFiles.isEmpty()) {
-                log.warn("khong co file csv nao het");
+
+            if (encryptedFiles.isEmpty()) {
+                log.warn("Không có file .enc hợp lệ trên SFTP.");
                 return null;
             }
 
-            //sort cac file, file moi nhat se nam o cuoi cung
-            Collections.sort(csvFiles);
-            String latestFileName = csvFiles.get(csvFiles.size() - 1);
-
+            // sorting be den lon, ngay lon nhat nam cuoi: a[n-1]
+            Collections.sort(encryptedFiles);
+            String latestFileName = encryptedFiles.get(encryptedFiles.size() - 1);
 
             //tai file ve
             String remoteFilePath = remotePath + latestFileName;

@@ -11,6 +11,9 @@ import org.example.service.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.io.File;
+import java.security.GeneralSecurityException;
+import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.time.LocalDate;
 import java.util.Scanner;
 
@@ -27,24 +30,36 @@ public class Main {
 
         //khoi tao cau hinh va ket noi
         AppConfig config = new AppConfig();
+
+        RsaKeyService rsaKeyService = new RsaKeyService(config);
+
+        try{
+            PublicKey publicKey = rsaKeyService.loadPublicKey();
+            PrivateKey privateKey = rsaKeyService.loadPrivateKey();
+
+            log.info("da doc duoc 2 key");
+        } catch (GeneralSecurityException e) {
+            log.info("loi khong doc duoc Key: " + e.getMessage());
+            throw new RuntimeException(e);
+        }
+
+        //ket noi database
         DatabaseConfig.init(config);
-
-
 
         TransactionRepository transactionRepository = new TransactionRepository();
         ReconciliationRepository reconciliationRepository = new ReconciliationRepository();
         PartnerTransactionRepository partnerTransactionRepository = new PartnerTransactionRepository();
-
-
+        FileService fileService = new FileService(rsaKeyService,config);
         SftpService sftpService = new SftpService(config);
         ConvertService convertService = new ConvertService(partnerTransactionRepository);
-        ReconciliationService reconService = new ReconciliationService(transactionRepository, partnerTransactionRepository, reconciliationRepository);
+        ReconciliationService reconService = new ReconciliationService(transactionRepository,
+                partnerTransactionRepository, reconciliationRepository, fileService,convertService );
         EmailService emailService = new EmailService(config, reconService);
         InquiryService inquiryService = new InquiryService(transactionRepository);
 
         ReconciliationJob reconciliationJob = new ReconciliationJob(sftpService);
-        reconciliationJob.start();
 
+        reconciliationJob.start();
 
         Scanner scanner = new Scanner(System.in);
         while (true) {
@@ -59,18 +74,13 @@ public class Main {
 
                     System.out.println("bdau doi soat");
                     downloadFile = reconciliationJob.getDownloadedFile();
-
                     if (downloadFile != null) {
-                        String dateStr = downloadFile.getName().replace("transactions_", "").replace(".csv", "");
-                        currentDate= LocalDate.parse(dateStr);
-
-                        convertService.convertAndSave(downloadFile, currentDate);
-
-                        reconciliationResultEntity = reconService.reconcile(currentDate);
-
-                        System.out.println("doi soat thanh cong, ktra du lieu trc khi gui mail");
+                        reconciliationResultEntity = reconService.processEncryptedFile(downloadFile);
+                        if(reconciliationResultEntity != null) {
+                            System.out.println("doi soat thanh cong");
+                        }
                     }else{
-                        System.out.println(("chua tai duoc file, hay doi hoac kiem tra"));
+                        System.out.println(("chua tai duoc file"));
                     }
                     break;
                 case "2":

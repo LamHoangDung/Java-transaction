@@ -131,8 +131,7 @@ public class AppConfig {
 
             if (resolvedValue == null || resolvedValue.isBlank()) {
                 throw new IllegalStateException(
-                        "Thiếu biến " + envName
-                                + " trong môi trường hoặc file .env"
+                        "Thiếu biến " + envName + " trong môi trường hoặc file .env"
                 );
             }
 
@@ -145,5 +144,25 @@ public class AppConfig {
 
     public int getInt(String key) {
         return Integer.parseInt(get(key));
+    }
+
+
+    public String getRsaPublicKey() {
+        return get("rsa.public.key");
+    }
+
+    public String getRsaPrivateKey() {
+        return get("rsa.private.key");
+    }
+    public String getPartnerSourceDir() {
+        return get("partner.source.dir");
+    }
+
+    public String getPartnerUploadDir() {
+        return get("partner.upload.dir");
+    }
+
+    public String getPartnerLocalDir(){
+        return get("partner.local.dir");
     }
 }

@@ -1,9 +1,6 @@
 package org.example.service;
+import org.example.config.AppConfig;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.security.GeneralSecurityException;
 import java.security.KeyFactory;
 import java.security.KeyPair;
@@ -12,83 +9,67 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
+import java.util.Base64;
 
 public class RsaKeyService {
 
-    public void generateAndSave(
-            Path publicKeyPath,
-            Path privateKeyPath
-    ) throws GeneralSecurityException, IOException {
+    private final AppConfig config;
 
-        // Không ghi đè khóa đang có.
-        if (Files.exists(publicKeyPath)
-                || Files.exists(privateKeyPath)) {
+    public RsaKeyService(AppConfig config){
+        this.config = config;
+    }
 
-            throw new IllegalStateException(
-                    "File khóa đã tồn tại. Không tạo khóa mới ghi đè."
-            );
-        }
+    public void generateKey(
+    ) throws GeneralSecurityException {
 
-        // Tạo thư mục chứa khóa nếu chưa có.
-        Files.createDirectories(
-                publicKeyPath.toAbsolutePath().getParent()
-        );
+        //chon thuat toan RSA
+        KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
 
-        Files.createDirectories(
-                privateKeyPath.toAbsolutePath().getParent()
-        );
-
-        // Chọn thuật toán tạo cặp khóa.
-        KeyPairGenerator generator =
-                KeyPairGenerator.getInstance("RSA");
-
-        // Độ dài khóa RSA là 2048 bit.
+        //chon do dai khoa
         generator.initialize(2048);
 
-        // Sinh public key và private key cùng một cặp.
+        //tao ra public key va private key theo 1 cặp
         KeyPair keyPair = generator.generateKeyPair();
 
-        // Chuyển khóa thành byte và lưu vào file.
-        Files.write(
-                publicKeyPath,
-                keyPair.getPublic().getEncoded(),
-                StandardOpenOption.CREATE_NEW
-        );
+        //chuyen key thanh chuoi doc duoc - string base64
+        String publicKey = Base64.getEncoder().encodeToString(keyPair.getPublic().getEncoded());
+        String privatekey = Base64.getEncoder().encodeToString(keyPair.getPrivate().getEncoded());
 
-        Files.write(
-                privateKeyPath,
-                keyPair.getPrivate().getEncoded(),
-                StandardOpenOption.CREATE_NEW
-        );
+        System.out.println("public key: " + publicKey);
+        System.out.println("private key: " + privatekey);
     }
 
-    public PublicKey loadPublicKey(
-            Path publicKeyPath
-    ) throws GeneralSecurityException, IOException {
+    public PublicKey loadPublicKey() throws GeneralSecurityException{
 
-        byte[] keyBytes = Files.readAllBytes(publicKeyPath);
+        String publicKeyBase64 = config.getRsaPublicKey();
 
-        X509EncodedKeySpec keySpec =
-                new X509EncodedKeySpec(keyBytes);
+        //decode lai key từ string thành byte
+        byte[] publicKeyBytes = Base64.getDecoder().decode(publicKeyBase64);
 
-        KeyFactory keyFactory =
-                KeyFactory.getInstance("RSA");
+        //mô tả định dạng của public Key
+        X509EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(publicKeyBytes);
 
-        return keyFactory.generatePublic(keySpec);
+        //mô tả định dạng chung object key
+        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+
+        //khôi phục object public key RSA  de su dung
+        return keyFactory.generatePublic(publicKeySpec);
     }
 
-    public PrivateKey loadPrivateKey(
-            Path privateKeyPath
-    ) throws GeneralSecurityException, IOException {
+    public PrivateKey loadPrivateKey() throws GeneralSecurityException {
 
-        byte[] keyBytes = Files.readAllBytes(privateKeyPath);
+        String privateKeyBase64 = config.getRsaPrivateKey();
 
-        PKCS8EncodedKeySpec keySpec =
-                new PKCS8EncodedKeySpec(keyBytes);
+        //decode key lai từ string -> byte
+        byte[] keyBytes = Base64.getDecoder().decode(privateKeyBase64);
 
-        KeyFactory keyFactory =
-                KeyFactory.getInstance("RSA");
+        //mo ta định dạng của public key
+        PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(keyBytes);
 
+        //mô tả định dạng dinh chung của object key
+        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+
+        //khôi phục object public key RSA  de su dung
         return keyFactory.generatePrivate(keySpec);
     }
 }
