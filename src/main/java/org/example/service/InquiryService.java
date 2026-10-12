@@ -1,6 +1,5 @@
 package org.example.service;
 
-import org.example.cronjob.ReconciliationJob;
 import org.example.repository.TransactionRepository;
 
 public class InquiryService {

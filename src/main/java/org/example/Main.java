@@ -2,12 +2,14 @@ package org.example;
 
 import org.example.config.AppConfig;
 import org.example.config.DatabaseConfig;
-import org.example.cronjob.ReconciliationJob;
+import org.example.config.QuartzSchedulerConfig;
 import org.example.entity.ReconciliationResultEntity;
 import org.example.repository.PartnerTransactionRepository;
 import org.example.repository.ReconciliationRepository;
 import org.example.repository.TransactionRepository;
 import org.example.service.*;
+import org.quartz.Scheduler;
+import org.quartz.SchedulerException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.io.File;
@@ -25,7 +27,7 @@ public class Main {
     private static File downloadFile = null;
 
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws SchedulerException {
 
 
         //khoi tao cau hinh va ket noi
@@ -54,12 +56,10 @@ public class Main {
         ConvertService convertService = new ConvertService(partnerTransactionRepository);
         ReconciliationService reconService = new ReconciliationService(transactionRepository,
                 partnerTransactionRepository, reconciliationRepository, fileService,convertService );
-        EmailService emailService = new EmailService(config, reconService);
         InquiryService inquiryService = new InquiryService(transactionRepository);
+        RabbitMQProducerService rabbitMQProducerService = new RabbitMQProducerService(config);
 
-        ReconciliationJob reconciliationJob = new ReconciliationJob(sftpService);
-
-        reconciliationJob.start();
+        Scheduler downloadFileScheduler = QuartzSchedulerConfig.begin(sftpService);
 
         Scanner scanner = new Scanner(System.in);
         while (true) {
@@ -73,33 +73,32 @@ public class Main {
                 case "1":
 
                     System.out.println("bdau doi soat");
-                    downloadFile = reconciliationJob.getDownloadedFile();
-                    if (downloadFile != null) {
-                        reconciliationResultEntity = reconService.processEncryptedFile(downloadFile);
-                        if(reconciliationResultEntity != null) {
-                            System.out.println("doi soat thanh cong");
-                        }
-                    }else{
-                        System.out.println(("chua tai duoc file"));
+                    downloadFile = (File) downloadFileScheduler.getContext().get("downloadedFile");
+                    reconciliationResultEntity = reconService.processEncryptedFile(downloadFile);
+                    if (reconciliationResultEntity == null) {
+                        System.out.println("Đối soát thất bại");
+                        break;
+                    }
+                    System.out.println("Đối soát thành công");
+
+                    try {
+                        rabbitMQProducerService.sendReport(reconciliationResultEntity);
+                        System.out.println("Đã gửi yêu cầu mail lên RabbitMQ");
+                    } catch (Exception e) {
+                        log.error("Không gửi được yêu cầu mail lên RabbitMQ", e);
+
+                        System.out.println(
+                                "Đối soát thành công nhưng gửi yêu cầu mail thất bại"
+                        );
                     }
                     break;
                 case "2":
-
-                    if (reconciliationResultEntity == null) {
-                        System.out.println("phai doi soat truoc khi gui mail");
-                    } else {
-                        System.out.println("\n bat dau gui mail");
-                        emailService.sendReport(reconciliationResultEntity);
-                        System.out.println("da gui mail thanh cong ");
-                    }
-                    break;
-                case "3":
                     System.out.println("thoat chuong trinh");
-                    reconciliationJob.shutdown();
+                    downloadFileScheduler.shutdown();
                     DatabaseConfig.close();
                     System.exit(0);
                     break;
-                case "4":
+                case "3":
                     System.out.println("Nhập mã giao dịch:");
                     String transactionId = scanner.nextLine().trim();
 
