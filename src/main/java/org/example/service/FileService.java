@@ -239,8 +239,7 @@ public class FileService {
     }
 
 
-    public Path encryptLatestCsv(
-    ) throws IOException, GeneralSecurityException {
+    public Path encryptLatestCsv() throws IOException, GeneralSecurityException {
 
         Path sourceDirectory = Path.of(
                 config.getPartnerSourceDir()
