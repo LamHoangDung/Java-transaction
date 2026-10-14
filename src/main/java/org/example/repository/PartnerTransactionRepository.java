@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 
 import java.sql.*;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -29,26 +30,23 @@ public class PartnerTransactionRepository {
                 statement.setTimestamp(3, Timestamp.valueOf(entity.getTransactionTime()));
                 statement.setString(4, entity.getMerchantId());
                 statement.setDate(5, Date.valueOf(fileDate));
-
-
                 statement.addBatch();
             }
             statement.executeBatch();
             log.info("da them giao dich doi tac xuong DB");
         } catch (Exception e) {
             log.error("loi insert vao bang partner_transactions:" + e.getMessage());
-            throw new RuntimeException(e);
         }
     }
 
-    public Set<String> countByFileDate(LocalDate fileDate) {
+    public List<String> countByFileDate(LocalDate fileDate) {
         String query = """
                 SELECT transaction_id
                             FROM partner_transactions
                             WHERE file_date = ?
                               AND status = 'SUCCESS'
                 """;
-        Set<String> ids = new HashSet<>();
+        List<String> ids = new ArrayList<>();
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement statement = conn.prepareStatement(query)){
              statement.setDate(1, Date.valueOf(fileDate));

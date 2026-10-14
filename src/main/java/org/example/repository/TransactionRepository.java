@@ -1,24 +1,27 @@
 package org.example.repository;
 
 import org.example.config.DatabaseConfig;
+import org.example.request.PaymentRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.sql.*;
 import java.time.LocalDate;
-import java.util.HashSet;
-import java.util.Set;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 public class TransactionRepository {
     private static final Logger log = LoggerFactory.getLogger(TransactionRepository.class);
-    public Set<String> countByDate(LocalDate date){
+
+    public List<String> countByDate(LocalDate date){
         String query = "SELECT transaction_id\n" +
                 "            FROM transactions\n" +
                 "            WHERE DATE(transaction_time) = ?\n" +
                 "              AND status = 'SUCCESS'" ;
 
 
-        Set<String> ids = new HashSet<>();
+        List<String> ids = new ArrayList<>();
         try(Connection connection = DatabaseConfig.getConnection(); //mo ket noi toi database
             PreparedStatement statement = connection.prepareStatement(query)){
             statement.setDate(1, Date.valueOf(date));
@@ -30,10 +33,8 @@ public class TransactionRepository {
             return ids;
         } catch (SQLException e) {
             log.error("gap loi khi lay giao dich ngay: {}", date + e.getMessage());
-            throw new RuntimeException(
-                    "Không thể lấy giao dịch bên mình" + e.getMessage()
-            );
         }
+        return null;
     }
 
 
@@ -52,8 +53,38 @@ public class TransactionRepository {
                 return null;
             }
 
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
+        } catch (Exception e) {
+            log.error("loi khi truy van giao dich: " + e.getMessage());
         }
+        return null;
+    }
+
+    public int insertSuccess(PaymentRequest paymentRequest){
+        String sql = """
+            INSERT INTO transactions (
+                transaction_id,
+                transaction_name,
+                transaction_time,
+                merchant_id,
+                status,
+                noti_status
+            )
+            VALUES (?, ?, ?, ?, 'SUCCESS', 'PENDING')
+            """;
+
+        try(Connection connection = DatabaseConfig.getConnection();
+            PreparedStatement statement = connection.prepareStatement(sql)){
+            statement.setString(1, paymentRequest.getTransactionId());
+            statement.setString(2, paymentRequest.getTransactionName());
+            statement.setTimestamp(3, Timestamp.valueOf(LocalDateTime.now()));
+            statement.setString(4, paymentRequest.getMerchantId());
+
+            return statement.executeUpdate();
+        } catch (Exception e) {
+            log.error("loi khong insert duoc giao dich vao DB: " + e.getMessage());
+
+        }
+        return 0;
     }
 }
+
