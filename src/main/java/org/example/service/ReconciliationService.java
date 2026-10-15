@@ -16,6 +16,7 @@ import java.security.GeneralSecurityException;
 import java.sql.Connection;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Set;
 
 public class ReconciliationService {
@@ -79,9 +80,8 @@ public class ReconciliationService {
     }
 
     public ReconciliationResultEntity reconcile(LocalDate date) {
-        Set<String> ourIds = transactionRepository.countByDate(date);
-
-        Set<String> partnerIds = partnerTransactionRepository.countByFileDate(date);
+        List<String> ourIds = transactionRepository.countByDate(date);
+        List<String> partnerIds = partnerTransactionRepository.countByFileDate(date);
 
         int bothHave = 0;
         int ourOnly = 0;

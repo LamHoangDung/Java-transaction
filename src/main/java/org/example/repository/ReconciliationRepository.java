@@ -10,7 +10,8 @@ import java.sql.*;
 
 public class ReconciliationRepository {
     private static final Logger log = LoggerFactory.getLogger(ReconciliationRepository.class);
-    public void saveResult(ReconciliationResultEntity result){
+
+    public void saveResult(ReconciliationResultEntity reconciliationResultEntity){
         String query = "INSERT INTO reconciliation_results \n" +
                 "                    (reconciliation_date, our_count, partner_count, both_have, partner_only, our_only)\n" +
                 "                VALUES (?, ?, ?, ?, ?, ?)\n" +
@@ -25,19 +26,18 @@ public class ReconciliationRepository {
         try(Connection conn = DatabaseConfig.getConnection();
             PreparedStatement statement = conn.prepareStatement(query)){
 
-            statement.setDate(1, Date.valueOf(result.getReconciliationDate()));
-            statement.setInt(2, result.getOurCount());
-            statement.setInt(3,result.getPartnerCount());
-            statement.setInt(4,result.getBothHave());
-            statement.setInt(5,result.getPartnerOnly());
-            statement.setInt(6, result.getOurOnly());
+            statement.setDate(1, Date.valueOf(reconciliationResultEntity.getReconciliationDate()));
+            statement.setInt(2, reconciliationResultEntity.getOurCount());
+            statement.setInt(3,reconciliationResultEntity.getPartnerCount());
+            statement.setInt(4,reconciliationResultEntity.getBothHave());
+            statement.setInt(5,reconciliationResultEntity.getPartnerOnly());
+            statement.setInt(6, reconciliationResultEntity.getOurOnly());
 
             statement.executeUpdate();
-            log.info("luu thanh cong kq doi soat ngay {} vào DB", result.getReconciliationDate());
-            ;
+            log.info("luu thanh cong kq doi soat ngay {} vào DB", reconciliationResultEntity.getReconciliationDate());
+
         } catch (Exception e) {
             log.error("loi luu ket qua doi soat: " + e.getMessage());
-            throw new RuntimeException(e);
         }
     }
 
@@ -58,8 +58,7 @@ public class ReconciliationRepository {
             statement.executeUpdate();
             log.info("da luu log gui toi mail ngay {} vao", report.getReportDate());
         } catch (Exception e) {
-            log.error("loi luu log gui mail {}", e.getMessage(), e);
-            throw new RuntimeException(e);
+            log.error("loi luu log gui mail " + e.getMessage());
         }
     }
 

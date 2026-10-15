@@ -1,6 +1,9 @@
 package org.example.config;
 
 import org.example.cronjob.DownloadFileJob;
+import org.example.cronjob.PaymentNotificationJob;
+import org.example.repository.TransactionRepository;
+import org.example.service.RabbitMQProducerService;
 import org.example.service.SftpService;
 import org.quartz.JobBuilder;
 import org.quartz.JobDetail;
@@ -13,7 +16,7 @@ import org.quartz.impl.StdSchedulerFactory;
 
 public class QuartzSchedulerConfig {
 
-    public static Scheduler begin(SftpService sftpService) throws SchedulerException {
+    public static Scheduler beginDownloadFile(SftpService sftpService) throws SchedulerException {
 
 
         // Tạo scheduler
@@ -45,7 +48,35 @@ public class QuartzSchedulerConfig {
 
         // Khởi động scheduler
         downloadFileScheduler.start();
-
         return downloadFileScheduler;
+    }
+
+    public static Scheduler beginPaymentNotification(TransactionRepository repository, RabbitMQProducerService producer) throws SchedulerException {
+
+        Scheduler scheduler = StdSchedulerFactory.getDefaultScheduler();
+        scheduler.getContext().put("transactionRepository", repository);
+        scheduler.getContext().put("rabbitMQProducerService", producer);
+
+
+        JobDetail job = JobBuilder
+                .newJob(PaymentNotificationJob.class)
+                .withIdentity("paymentNotificationJob", "payment")
+                .build();
+
+        Trigger trigger = TriggerBuilder
+                .newTrigger()
+                .withIdentity("paymentNotificationTrigger", "payment")
+                .startNow()
+                .withSchedule(
+                        SimpleScheduleBuilder.simpleSchedule()
+                                .withIntervalInSeconds(5)
+                                .repeatForever()
+                )
+                .build();
+
+        scheduler.scheduleJob(job, trigger);
+        scheduler.start();
+
+        return scheduler;
     }
 }
