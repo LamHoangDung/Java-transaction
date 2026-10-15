@@ -87,12 +87,6 @@
             <version>2.0.1</version>
         </dependency>
 
-        <!--
-            7. SLF4J + Logback — Hệ thống Log
-            Vai trò: Ghi log ra console và file thay vì System.out.println.
-            Chuyên nghiệp hơn, có thể tắt log theo level (DEBUG/INFO/ERROR).
-            SLF4J = interface (API chung), Logback = implementation (hiện thực).
-        -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>

@@ -18,4 +18,6 @@ public class TransactionEntity {
     private String status;
     private LocalDateTime transactionTime;
     private String merchantId;
+    private String transactionName;
+    private String notiStatus;
 }

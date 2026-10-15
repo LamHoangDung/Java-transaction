@@ -59,7 +59,7 @@ public class Main {
         InquiryService inquiryService = new InquiryService(transactionRepository);
         RabbitMQProducerService rabbitMQProducerService = new RabbitMQProducerService(config);
 
-        Scheduler downloadFileScheduler = QuartzSchedulerConfig.begin(sftpService);
+        Scheduler downloadFileScheduler = QuartzSchedulerConfig.beginDownloadFile(sftpService);
 
         Scanner scanner = new Scanner(System.in);
         while (true) {

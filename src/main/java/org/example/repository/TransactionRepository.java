@@ -1,6 +1,7 @@
 package org.example.repository;
 
 import org.example.config.DatabaseConfig;
+import org.example.entity.TransactionEntity;
 import org.example.request.PaymentRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,11 +26,10 @@ public class TransactionRepository {
         try(Connection connection = DatabaseConfig.getConnection(); //mo ket noi toi database
             PreparedStatement statement = connection.prepareStatement(query)){
             statement.setDate(1, Date.valueOf(date));
-            try (ResultSet resultSet = statement.executeQuery()) {
+            ResultSet resultSet = statement.executeQuery();
                 while (resultSet.next()) {
                     ids.add(resultSet.getString("transaction_id"));
                 }
-            }
             return ids;
         } catch (SQLException e) {
             log.error("gap loi khi lay giao dich ngay: {}", date + e.getMessage());
@@ -86,5 +86,33 @@ public class TransactionRepository {
         }
         return 0;
     }
+
+    public List<TransactionEntity> findPendingTransaction(){
+        String sql = "SELECT * FROM transactions t where t.status = 'SUCCESS' AND t.noti_status = 'PENDING'  ";
+
+        List<TransactionEntity> transactionList = new ArrayList<>();
+        try (Connection connection = DatabaseConfig.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+
+            ResultSet resultSet = statement.executeQuery();
+            while (resultSet.next()) {
+
+                TransactionEntity transaction = new TransactionEntity();
+                transaction.setTransactionId(resultSet.getString("transaction_id"));
+                transaction.setTransactionName(resultSet.getString("transaction_name"));
+                transaction.setTransactionTime(resultSet.getTimestamp("transaction_time").toLocalDateTime());
+                transaction.setMerchantId(resultSet.getString("merchant_id"));
+                transaction.setStatus(resultSet.getString("status"));
+                transaction.setNotiStatus(resultSet.getString("noti_status"));
+
+                transactionList.add(transaction);
+            }
+            return transactionList;
+        } catch (Exception e) {
+            log.error("loi khong tim duoc giao dich pending: " + e.getMessage());
+        }
+        return null;
+    }
+
 }
 
